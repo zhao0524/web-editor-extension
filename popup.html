@@ -19,9 +19,11 @@
       text-align: center;
     }
 
-    input[type="text"] {
+    textarea {
       display: block;
       width: 100%;
+      min-height: 34px;
+      max-height: 120px;
       padding: 8px 10px;
       margin-bottom: 10px;
       border: 1px solid #3a3a5c;
@@ -29,12 +31,15 @@
       background: #16213e;
       color: #e0e0e0;
       font-size: 13px;
+      font-family: inherit;
       box-sizing: border-box;
       outline: none;
+      resize: none;
+      overflow-y: auto;
       transition: border-color 0.15s;
     }
 
-    input[type="text"]:focus {
+    textarea:focus {
       border-color: #e94560;
     }
 
@@ -59,7 +64,7 @@
 </head>
 <body>
   <h2>H1 Changer</h2>
-  <input type="text" id="textInput" placeholder="Enter replacement text…" value="Hello World">
+  <textarea id="textInput" rows="1" placeholder="Enter replacement text…">Hello World</textarea>
   <button id="changeBtn">Change H1</button>
   <script src="popup.js"></script>
 </body>

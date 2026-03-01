@@ -1,3 +1,12 @@
+const textarea = document.getElementById("textInput");
+
+function autoResize() {
+  textarea.style.height = "auto";
+  textarea.style.height = textarea.scrollHeight + "px";
+}
+
+textarea.addEventListener("input", autoResize);
+
 document.getElementById("changeBtn").addEventListener("click", async () => {
   const text = document.getElementById("textInput").value.trim();
   if (!text) return;
