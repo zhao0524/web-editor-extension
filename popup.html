@@ -19,6 +19,25 @@
       text-align: center;
     }
 
+    input[type="text"] {
+      display: block;
+      width: 100%;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      border: 1px solid #3a3a5c;
+      border-radius: 6px;
+      background: #16213e;
+      color: #e0e0e0;
+      font-size: 13px;
+      box-sizing: border-box;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #e94560;
+    }
+
     button {
       display: block;
       width: 100%;
@@ -40,7 +59,8 @@
 </head>
 <body>
   <h2>H1 Changer</h2>
-  <button id="changeBtn">Change H1 to Hello World</button>
+  <input type="text" id="textInput" placeholder="Enter replacement text…" value="Hello World">
+  <button id="changeBtn">Change H1</button>
   <script src="popup.js"></script>
 </body>
 </html>
