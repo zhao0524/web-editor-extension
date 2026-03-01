@@ -43,13 +43,17 @@
       border-color: #e94560;
     }
 
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
     button {
-      display: block;
-      width: 100%;
+      flex: 1;
       padding: 10px;
       border: none;
       border-radius: 6px;
-      background: #e94560;
       color: #fff;
       font-size: 13px;
       font-weight: 600;
@@ -57,15 +61,44 @@
       transition: background 0.15s;
     }
 
-    button:hover {
+    #aiBtn {
+      background: #7b2ff7;
+    }
+
+    #aiBtn:hover {
+      background: #6522d4;
+    }
+
+    #aiBtn:disabled {
+      background: #4a3a6a;
+      cursor: wait;
+    }
+
+    #changeBtn {
+      background: #e94560;
+    }
+
+    #changeBtn:hover {
       background: #c73650;
+    }
+
+    #status {
+      font-size: 11px;
+      text-align: center;
+      color: #888;
+      min-height: 16px;
     }
   </style>
 </head>
 <body>
   <h2>H1 Changer</h2>
-  <textarea id="textInput" rows="1" placeholder="Enter replacement text…">Hello World</textarea>
-  <button id="changeBtn">Change H1</button>
+  <textarea id="textInput" rows="1" placeholder="Type a prompt for AI, or text to apply…">Hello World</textarea>
+  <div class="btn-row">
+    <button id="aiBtn">Ask AI</button>
+    <button id="changeBtn">Change H1</button>
+  </div>
+  <div id="status"></div>
+  <script src="config.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
