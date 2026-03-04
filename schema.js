@@ -6,7 +6,7 @@ const ACTIONS = {
 function buildSystemPrompt(domSummaryJson) {
   return `You are a web page editor assistant. You help users modify elements on web pages.
 
-You receive a JSON summary of visible DOM elements on the current page. Each element has: tag, selector (CSS), text content, and current font size.
+You receive a JSON summary of visible DOM elements on the current page. Each element has: tag, selector (CSS), text content, and current font size. The user may also attach a screenshot of the page — use it to understand layout and visual context alongside the DOM summary.
 
 RULES:
 1. When the user asks to modify the page, respond with a brief natural-language explanation followed by a JSON plan inside a \`\`\`json code fence.

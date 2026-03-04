@@ -6,9 +6,17 @@ const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
 const undoBtn = document.getElementById("undoBtn");
 
+const attachBtn = document.getElementById("attachBtn");
+const fileInput = document.getElementById("fileInput");
+const imagePreview = document.getElementById("imagePreview");
+const previewThumb = document.getElementById("previewThumb");
+const previewName = document.getElementById("previewName");
+const previewRemove = document.getElementById("previewRemove");
+
 const conversationHistory = [];
 const undoStack = [];
 let domSummary = null;
+let pendingImage = null;
 
 /* ------------------------------------------------------------------ */
 /*  Textarea auto-resize                                              */
@@ -21,6 +29,50 @@ function autoResize() {
 msgInput.addEventListener("input", autoResize);
 
 /* ------------------------------------------------------------------ */
+/*  Image attach — file picker + clipboard paste                      */
+/* ------------------------------------------------------------------ */
+
+function stageImage(file) {
+  if (!file || !file.type.startsWith("image/")) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    const dataUrl = reader.result;
+    const base64 = dataUrl.split(",")[1];
+    pendingImage = { base64, mimeType: file.type, dataUrl };
+    previewThumb.src = dataUrl;
+    previewName.textContent = file.name || "pasted image";
+    imagePreview.classList.add("visible");
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImage() {
+  pendingImage = null;
+  previewThumb.src = "";
+  previewName.textContent = "";
+  imagePreview.classList.remove("visible");
+  fileInput.value = "";
+}
+
+attachBtn.addEventListener("click", () => fileInput.click());
+fileInput.addEventListener("change", () => {
+  if (fileInput.files[0]) stageImage(fileInput.files[0]);
+});
+previewRemove.addEventListener("click", clearImage);
+
+msgInput.addEventListener("paste", (e) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith("image/")) {
+      e.preventDefault();
+      stageImage(item.getAsFile());
+      return;
+    }
+  }
+});
+
+/* ------------------------------------------------------------------ */
 /*  Chat helpers                                                      */
 /* ------------------------------------------------------------------ */
 
@@ -28,10 +80,16 @@ function scrollToBottom() {
   chatArea.scrollTop = chatArea.scrollHeight;
 }
 
-function addBubble(text, role) {
+function addBubble(text, role, imageDataUrl) {
   const div = document.createElement("div");
   div.classList.add("msg", role);
-  div.textContent = text;
+  if (text) div.textContent = text;
+  if (imageDataUrl) {
+    const img = document.createElement("img");
+    img.src = imageDataUrl;
+    img.alt = "attached screenshot";
+    div.appendChild(img);
+  }
   chatArea.appendChild(div);
   scrollToBottom();
 }
@@ -304,9 +362,11 @@ function renderPlanCard(plan) {
 
 async function sendMessage() {
   const text = msgInput.value.trim();
-  if (!text) return;
+  if (!text && !pendingImage) return;
 
-  addBubble(text, "user");
+  const sentImage = pendingImage;
+  addBubble(text, "user", sentImage?.dataUrl);
+  clearImage();
   msgInput.value = "";
   msgInput.style.height = "auto";
   sendBtn.disabled = true;
@@ -314,7 +374,10 @@ async function sendMessage() {
 
   await scanPageDOM();
 
-  conversationHistory.push({ role: "user", parts: [{ text }] });
+  const parts = [];
+  if (text) parts.push({ text });
+  if (sentImage) parts.push({ inlineData: { mimeType: sentImage.mimeType, data: sentImage.base64 } });
+  conversationHistory.push({ role: "user", parts });
 
   try {
     const sysPrompt = buildSystemPrompt(JSON.stringify(domSummary || [], null, 2));
