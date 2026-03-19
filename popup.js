@@ -147,12 +147,16 @@ async function scanPageDOM() {
           const sel = selector(el);
           if (seen.has(sel)) return;
           seen.add(sel);
-          out.push({
+          const entry = {
             tag: el.tagName.toLowerCase(),
             selector: sel,
             text: (el.innerText || "").trim().slice(0, 80),
             fontSize: getComputedStyle(el).fontSize,
-          });
+          };
+          if (el.tagName.toLowerCase() === "img") {
+            entry.src = el.src.slice(0, 120);
+          }
+          out.push(entry);
         });
         return out.slice(0, 40);
       },
@@ -186,6 +190,7 @@ async function undo() {
           const el = document.querySelector(c.selector);
           if (!el) continue;
           if (c.prop === "textContent") el.textContent = c.old;
+          else if (c.prop === "src") el.src = c.old;
           else el.style[c.prop] = c.old;
         }
       },
@@ -202,12 +207,12 @@ async function undo() {
 /*  Execute approved plan actions                                     */
 /* ------------------------------------------------------------------ */
 
-async function executePlan(actions) {
+async function executePlan(actions, uploadedImageDataUrl) {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: (actions) => {
+      func: (actions, uploadedImageDataUrl) => {
         const snapshot = [];
         let applied = 0;
 
@@ -223,11 +228,16 @@ async function executePlan(actions) {
             snapshot.push({ selector: a.target, prop: "fontSize", old: el.style.fontSize || "" });
             el.style.fontSize = a.proposed_value;
             applied++;
+          } else if (a.action === "replace_image") {
+            if (!uploadedImageDataUrl) continue;
+            snapshot.push({ selector: a.target, prop: "src", old: el.src });
+            el.src = uploadedImageDataUrl;
+            applied++;
           }
         }
         return { snapshot, applied };
       },
-      args: [actions],
+      args: [actions, uploadedImageDataUrl || null],
     });
 
     const { snapshot, applied } = results[0].result;
@@ -246,7 +256,7 @@ async function executePlan(actions) {
 /*  Plan preview card                                                 */
 /* ------------------------------------------------------------------ */
 
-function renderPlanCard(plan) {
+function renderPlanCard(plan, uploadedImage) {
   document.querySelectorAll(".plan-card.active").forEach(c => {
     c.classList.remove("active");
     c.classList.add("expired");
@@ -303,12 +313,26 @@ function renderPlanCard(plan) {
     desc.classList.add("action-desc");
     desc.textContent = a.description;
 
-    const inp = document.createElement("input");
-    inp.type = "text";
-    inp.classList.add("action-value-input");
-    inp.value = a.proposed_value;
-
-    item.append(topRow, tgt, desc, inp);
+    if (a.action === "replace_image") {
+      const imgLbl = document.createElement("div");
+      imgLbl.classList.add("action-image-label");
+      if (uploadedImage?.dataUrl) {
+        const thumb = document.createElement("img");
+        thumb.src = uploadedImage.dataUrl;
+        thumb.classList.add("action-image-thumb");
+        imgLbl.appendChild(thumb);
+      }
+      const note = document.createElement("span");
+      note.textContent = uploadedImage ? "Your uploaded image" : "⚠ No image attached";
+      imgLbl.appendChild(note);
+      item.append(topRow, tgt, desc, imgLbl);
+    } else {
+      const inp = document.createElement("input");
+      inp.type = "text";
+      inp.classList.add("action-value-input");
+      inp.value = a.proposed_value;
+      item.append(topRow, tgt, desc, inp);
+    }
     list.appendChild(item);
   });
   card.appendChild(list);
@@ -330,10 +354,10 @@ function renderPlanCard(plan) {
     const actions = Array.from(items).map(it => ({
       action: it.dataset.actionType,
       target: it.dataset.target,
-      proposed_value: it.querySelector(".action-value-input").value,
+      proposed_value: it.querySelector(".action-value-input")?.value ?? "__uploaded__",
     }));
     if (actions.length === 0) return;
-    await executePlan(actions);
+    await executePlan(actions, uploadedImage?.dataUrl);
     card.classList.remove("active");
     card.classList.add("applied");
     applyBtn.disabled = true;
@@ -408,7 +432,7 @@ async function sendMessage() {
     if (clean) addBubble(clean, "ai");
 
     if (plan && validatePlan(plan)) {
-      renderPlanCard(plan);
+      renderPlanCard(plan, sentImage);
     } else if (plan) {
       addBubble("Received a plan but it failed validation. Try rephrasing your request.", "system");
     }

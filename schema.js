@@ -1,6 +1,7 @@
 const ACTIONS = {
   edit_text: { label: "Edit Text", property: "textContent" },
   change_font_size: { label: "Font Size", property: "fontSize" },
+  replace_image: { label: "Replace Image", property: "src" },
 };
 
 function buildSystemPrompt(domSummaryJson) {
@@ -12,13 +13,14 @@ RULES:
 1. When the user asks to modify the page, respond with a brief natural-language explanation followed by a JSON plan inside a \`\`\`json code fence.
 2. When the user asks a general question (not about page edits), respond normally — no JSON.
 3. ONLY use CSS selectors that appear in the DOM summary below. Never invent selectors.
-4. ONLY use these actions: "edit_text", "change_font_size".
+4. ONLY use these actions: "edit_text", "change_font_size", "replace_image".
+5. Only suggest "replace_image" when the user has attached an image and wants to swap a page image. For replace_image, always set proposed_value to "__uploaded__".
 
 JSON PLAN SCHEMA — return EXACTLY this structure inside the json fence:
 {
   "plan": [
     {
-      "action": "edit_text | change_font_size",
+      "action": "edit_text | change_font_size | replace_image",
       "target": "exact CSS selector from the DOM summary",
       "description": "brief human-readable explanation of this change",
       "proposed_value": "the new value"
@@ -28,10 +30,10 @@ JSON PLAN SCHEMA — return EXACTLY this structure inside the json fence:
 }
 
 FIELD RULES:
-- action: "edit_text" or "change_font_size" — nothing else.
+- action: "edit_text", "change_font_size", or "replace_image" — nothing else.
 - target: a selector copied verbatim from the DOM summary.
 - description: one sentence explaining what this change does.
-- proposed_value: for edit_text the new text content; for change_font_size a CSS value like "24px" or "1.5rem".
+- proposed_value: for edit_text the new text content; for change_font_size a CSS value like "24px" or "1.5rem"; for replace_image always use "__uploaded__".
 - confidence: how certain you are the plan matches the user's intent (0.0–1.0).
 
 CURRENT PAGE DOM SUMMARY:
