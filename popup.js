@@ -5,6 +5,7 @@ const chatArea = document.getElementById("chatArea");
 const msgInput = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
 const undoBtn = document.getElementById("undoBtn");
+const layoutBtn = document.getElementById("layoutBtn");
 
 const attachBtn = document.getElementById("attachBtn");
 const fileInput = document.getElementById("fileInput");
@@ -17,6 +18,7 @@ const conversationHistory = [];
 const undoStack = [];
 let domSummary = null;
 let pendingImage = null;
+let layoutModeActive = false;
 
 /* ------------------------------------------------------------------ */
 /*  Textarea auto-resize                                              */
@@ -446,6 +448,133 @@ async function sendMessage() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Layout drag mode — injected into the active tab                  */
+/* ------------------------------------------------------------------ */
+
+function startDragModeOnPage() {
+  if (window.__webEditorDragMode) return;
+  window.__webEditorDragMode = true;
+  window.__webEditorDragHistory = [];
+
+  const style = document.createElement("style");
+  style.id = "__webEditorDragStyle";
+  style.textContent = `
+    .__drag-hover { outline: 2px dashed rgba(123,47,247,0.8) !important; cursor: grab !important; }
+    .__drag-active { outline: 2px solid #7b2ff7 !important; cursor: grabbing !important;
+      opacity: 0.85; position: relative; z-index: 99999; box-shadow: 0 8px 24px rgba(0,0,0,0.4) !important; }
+  `;
+  document.head.appendChild(style);
+
+  let dragEl = null, startX = 0, startY = 0, origTx = 0, origTy = 0;
+
+  function getTranslate(el) {
+    const m = (el.style.transform || "").match(/translate\((-?[\d.]+)px,\s*(-?[\d.]+)px\)/);
+    return m ? [parseFloat(m[1]), parseFloat(m[2])] : [0, 0];
+  }
+
+  function uniqueSelector(el) {
+    if (el.id) return "#" + el.id;
+    const path = [];
+    let cur = el;
+    while (cur && cur !== document.body) {
+      let seg = cur.tagName.toLowerCase();
+      if (cur.parentElement) {
+        const siblings = Array.from(cur.parentElement.children).filter(c => c.tagName === cur.tagName);
+        if (siblings.length > 1) seg += ":nth-of-type(" + (siblings.indexOf(cur) + 1) + ")";
+      }
+      path.unshift(seg);
+      cur = cur.parentElement;
+    }
+    return path.join(" > ");
+  }
+
+  const onMouseDown = (e) => {
+    const el = e.target.closest("div,section,article,header,footer,nav,aside,main");
+    if (!el || el === document.body || el === document.documentElement) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragEl = el;
+    [origTx, origTy] = getTranslate(el);
+    startX = e.clientX - origTx;
+    startY = e.clientY - origTy;
+    el.classList.add("__drag-active");
+    el.classList.remove("__drag-hover");
+  };
+
+  const onMouseMove = (e) => {
+    if (dragEl) {
+      dragEl.style.transform = `translate(${e.clientX - startX}px, ${e.clientY - startY}px)`;
+    } else {
+      const el = e.target.closest("div,section,article,header,footer,nav,aside,main");
+      document.querySelectorAll(".__drag-hover").forEach(x => { if (x !== el) x.classList.remove("__drag-hover"); });
+      if (el && el !== document.body) el.classList.add("__drag-hover");
+    }
+  };
+
+  const onMouseUp = () => {
+    if (!dragEl) return;
+    dragEl.classList.remove("__drag-active");
+    const [tx, ty] = getTranslate(dragEl);
+    window.__webEditorDragHistory.push({
+      selector: uniqueSelector(dragEl),
+      oldTransform: origTx === 0 && origTy === 0 ? "" : `translate(${origTx}px, ${origTy}px)`,
+    });
+    dragEl = null;
+  };
+
+  document.addEventListener("mousedown", onMouseDown, true);
+  document.addEventListener("mousemove", onMouseMove, true);
+  document.addEventListener("mouseup", onMouseUp, true);
+  window.__webEditorDragHandlers = { onMouseDown, onMouseMove, onMouseUp };
+}
+
+function stopDragModeOnPage() {
+  if (!window.__webEditorDragMode) return { changes: [] };
+  const h = window.__webEditorDragHandlers || {};
+  document.removeEventListener("mousedown", h.onMouseDown, true);
+  document.removeEventListener("mousemove", h.onMouseMove, true);
+  document.removeEventListener("mouseup", h.onMouseUp, true);
+  document.querySelectorAll(".__drag-hover, .__drag-active").forEach(el => {
+    el.classList.remove("__drag-hover", "__drag-active");
+  });
+  document.getElementById("__webEditorDragStyle")?.remove();
+  window.__webEditorDragMode = false;
+  const changes = (window.__webEditorDragHistory || []).map(c => ({
+    selector: c.selector,
+    prop: "transform",
+    old: c.oldTransform,
+  }));
+  window.__webEditorDragHistory = [];
+  return { changes };
+}
+
+async function toggleLayoutMode() {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!layoutModeActive) {
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: startDragModeOnPage });
+      layoutModeActive = true;
+      layoutBtn.textContent = "Exit Layout";
+      layoutBtn.classList.add("active");
+      addBubble("Layout mode on — drag any element to move it. Click Exit Layout when done.", "system");
+    } else {
+      const results = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: stopDragModeOnPage });
+      const { changes } = results[0].result;
+      if (changes.length > 0) {
+        undoStack.push(changes);
+        updateUndoBtn();
+      }
+      layoutModeActive = false;
+      layoutBtn.textContent = "Layout";
+      layoutBtn.classList.remove("active");
+      addBubble(`Layout mode off — ${changes.length} move${changes.length !== 1 ? "s" : ""} recorded. Use Undo to revert.`, "system");
+    }
+  } catch (e) {
+    addBubble("Layout mode error: " + e.message, "system");
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /*  Event listeners                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -459,6 +588,7 @@ msgInput.addEventListener("keydown", (e) => {
 });
 
 undoBtn.addEventListener("click", undo);
+layoutBtn.addEventListener("click", toggleLayoutMode);
 
 document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === "z") {

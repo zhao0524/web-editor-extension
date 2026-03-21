@@ -311,6 +311,21 @@
       flex-shrink: 0;
     }
 
+    /* ---- Layout button ---- */
+    #layoutBtn {
+      padding: 4px 10px;
+      border: 1px solid #3a3a5c;
+      border-radius: 5px;
+      background: transparent;
+      color: #e0e0e0;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    #layoutBtn:hover { background: #2a2a4a; border-color: #7b2ff7; }
+    #layoutBtn.active { background: #7b2ff7; border-color: #7b2ff7; color: #fff; }
+
     /* ---- Scrollbar ---- */
     #chatArea::-webkit-scrollbar { width: 5px; }
     #chatArea::-webkit-scrollbar-track { background: transparent; }
@@ -320,7 +335,10 @@
 <body>
   <header>
     <h1>Web Editor</h1>
-    <button id="undoBtn" disabled>Undo</button>
+    <div style="display:flex;gap:6px">
+      <button id="layoutBtn">Layout</button>
+      <button id="undoBtn" disabled>Undo</button>
+    </div>
   </header>
 
   <div id="chatArea"></div>
