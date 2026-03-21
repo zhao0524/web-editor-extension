@@ -7,10 +7,12 @@ Powered by Google Gemini.
 ## How It Works
 
 1. **Open the extension** on any web page. It automatically scans the page and builds a map of visible elements (headings, buttons, links, sections, etc.).
-2. **Describe a change** in plain English — for example, *"Make the main heading say Welcome Back"* or *"Increase the button font size to 20px"*.
+2. **Describe a change** in plain English — for example, *"Make the main heading say Welcome Back"* or *"Increase the button font size to 20px"*. Optionally attach or paste a screenshot to give the AI visual context.
 3. **Review the plan.** Gemini returns a structured set of proposed changes displayed as cards. Each card shows the target element, a description, and an editable value. You can modify values, remove individual actions, or discard the whole plan.
 4. **Apply.** Once you're satisfied, click Apply Changes. The extension executes only the approved actions on the page.
 5. **Undo.** Every change is saved to an undo stack. Press the Undo button or Ctrl+Z to revert changes one at a time, like Google Docs.
+
+You can also use **Layout mode** (the Layout button in the toolbar) to drag elements around the page directly with your mouse, without using the AI at all.
 
 ## Supported Actions
 
@@ -18,6 +20,8 @@ Powered by Google Gemini.
 |---|---|
 | **Edit Text** | Changes the text content of an element |
 | **Font Size** | Changes the CSS `font-size` of an element |
+| **Replace Image** | Swaps an image with one you upload or paste |
+| **Drag to Reposition** | Visually move any element around the page in Layout mode |
 
 ## Safety
 
@@ -47,7 +51,7 @@ const CONFIG = {
 ```
 manifest.json   — Chrome extension config (Manifest V3)
 popup.html      — Extension popup UI and styles
-popup.js        — Chat logic, DOM scanning, plan rendering, execution, undo
+popup.js        — Chat logic, DOM scanning, plan rendering, execution, undo, layout mode
 schema.js       — System prompt, JSON plan extraction and validation
 config.js       — API key (gitignored)
 .gitignore      — Keeps config.js out of version control
