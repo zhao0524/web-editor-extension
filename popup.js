@@ -575,6 +575,30 @@ async function toggleLayoutMode() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Traffic light buttons                                             */
+/* ------------------------------------------------------------------ */
+
+document.querySelector(".tl.close").addEventListener("click", () => window.close());
+
+// Minimize: shrink the panel height briefly as a visual cue (Chrome extensions can't truly minimize)
+document.querySelector(".tl.min").addEventListener("click", () => {
+  document.body.style.transition = "height 0.2s ease";
+  document.body.style.height = "44px";
+  document.body.style.overflow = "hidden";
+  setTimeout(() => {
+    document.body.style.height = "580px";
+    document.body.style.overflow = "";
+  }, 600);
+});
+
+// Maximize: flash a brief scale pulse (Chrome popups can't be resized)
+document.querySelector(".tl.max").addEventListener("click", () => {
+  document.body.style.transition = "transform 0.15s ease";
+  document.body.style.transform = "scale(1.02)";
+  setTimeout(() => { document.body.style.transform = ""; }, 200);
+});
+
+/* ------------------------------------------------------------------ */
 /*  Event listeners                                                   */
 /* ------------------------------------------------------------------ */
 
